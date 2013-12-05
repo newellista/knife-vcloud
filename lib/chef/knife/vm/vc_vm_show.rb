@@ -29,52 +29,65 @@ class Chef
 
         vm_arg = @name_args.first
 
-        connection.login
-
         vm = get_vm(vm_arg)
 
-        vm_info = connection.get_vm_info vm[:id]
-        vm_disks = connection.get_vm_disk_info vm[:id]
-        connection.logout
-
-        out_msg("VM Name", vm[:vm_name])
-        out_msg("OS Name", vm[:os_desc])
-        out_msg("Status", vm[:status])
+        out_msg("VM Name", vm.name)
+        out_msg("OS Name", vm.operating_system)
+        out_msg("Status", vm.status)
+        out_msg("vApp", vm.vapp_name)
 
         list = []
         list << ['', '']
-        vm_info.each do |section, values|
-          list << ui.color(section.capitalize, :bold)
-          list << ''
 
-          list << (values[:description] || '')
-          list << (values[:name] || '')
+        list << ui.color("Number of Virtual CPUs", :bold)
+        list << vm.cpu.to_s
 
-          list << ['', '']
-        end
+        list << ui.color("Memory size (MB)", :bold)
+        list << vm.memory.to_s
 
-        list << [ui.color('Disks', :bold), '']
-        vm_disks.each do |values|
-          list << (values[:name] || '')
-          list << (values[:capacity] || '')
-        end
+        list << [ui.color("Disks", :bold), '']
 
-        list << ['', '', ui.color('Networks', :bold), '']
-        vm[:networks].each do |network, values|
-          list << [(network || ''), '']
-          values.each do |k, v|
-            list << "  #{(pretty_symbol(k) || '')}"
-            list << (v || '')
+        vm.hard_disks.each do |disk|
+          disk.each do |key, value|
+            list << key
+            list << value.to_s
           end
         end
 
-        list << ['', '', ui.color('Guest Customizations', :bold), '']
-        list.flatten!
-        vm[:guest_customizations].each do |k, v|
-          list << (pretty_symbol(k) || '')
-          list << (v || '')
+        list << ['', '', ui.color('Networks', :bold), '']
+
+
+        network = vm.network
+        list << ["Primary connection", network.primary_network_connection_index.to_s]
+
+        connections = network.connections.collect do |network|
+          show_vm_connection(network)
         end
+
+        list << connections
+
+        # list << ['', '', ui.color('Guest Customizations', :bold), '']
+        # list.flatten!
+        # vm[:guest_customizations].each do |k, v|
+        #   list << (pretty_symbol(k) || '')
+        #   list << (v || '')
+        # end
+        list.flatten!
         ui.msg ui.list(list, :columns_across, 2)
+      end
+
+      def show_vm_connection(network)
+        list = []
+        name = network[:network]
+        name << " (connected)" if network[:is_connected]
+
+        list << ["Network", name]
+        list << ["  Index", network[:network_connection_index].to_s]
+        list << ["  Mac address", network[:mac_address]]
+        list << ["  Ip allocation mode", network[:ip_address_allocation_mode]]
+        list << ["  Ip", network[:ip_address]]
+        list << ["  Needs customization", ''] if network[:needsCustomization]
+        list
       end
     end
   end

@@ -18,11 +18,11 @@
 
 class Chef
   class Knife
-    class VcVmSetInfo < Chef::Knife
+    class VcVmEdit < Chef::Knife
       include Knife::VcCommon
       include Knife::VcVmCommon
 
-      banner "knife vc vm set info [VM] (options)"
+      banner "knife vc vm edit [VM] (options)"
 
       option :vm_cpus_number,
              :long => "--cpus CPUs_NUMBER",
@@ -50,20 +50,18 @@ class Chef
         ram = locate_config_value(:vm_ram)
         vm_name = locate_config_value(:vm_name)
 
-        connection.login
-
         vm = get_vm(vm_arg)
 
         if cpus
-          task_id = connection.set_vm_cpus vm[:id], cpus
           ui.msg "VM setting CPUs info..."
-          wait_task(connection, task_id)
+          vm.cpu = cpus
+          vm.save
         end
 
         if ram
-          task_id = connection.set_vm_ram vm[:id], ram
           ui.msg "VM setting RAM info..."
-          wait_task(connection, task_id)
+          vm.memory = ram
+          vm.save
         end
 
         if vm_name
